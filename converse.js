@@ -141,6 +141,16 @@
 
     converse.initialize = function (settings, callback) {
         var converse = this;
+        var unloadevent;
+        if ('onbeforeunload' in window) {
+            unloadevent = 'beforeunload';
+        } else if ('onunload' in window) {
+            unloadevent = 'unload';
+        } else if ('onpagehide' in window) {
+            // Mobile Safari (at least older versions) doesn't support unload or beforeunload.
+            // Apple recommends "pagehide" instead.
+            unloadevent = 'pagehide';
+        }
 
         // Logging
         Strophe.log = function (level, msg) { converse.log(level+' '+msg, level); };
@@ -189,6 +199,19 @@
             'away':         3,
             'dnd':          2,
             'online':       1
+        };
+
+        var PRETTY_CONNECTION_STATUS = {
+            0: 'ERROR',
+            1: 'CONNECTING',
+            2: 'CONNFAIL',
+            3: 'AUTHENTICATING',
+            4: 'AUTHFAIL',
+            5: 'CONNECTED',
+            6: 'DISCONNECTED',
+            7: 'DISCONNECTING',
+            8: 'ATTACHED',
+            9: 'REDIRECT'
         };
 
         // XEP-0085 Chat states
@@ -412,7 +435,7 @@
                 $(window).on('mousemove' , function () { converse.autoAwayReset(); });
                 $(window).on('keypress' , function () { converse.autoAwayReset(); });
                 $(window).on('focus' , function () { converse.autoAwayReset(); });
-                $(window).on('beforeunload' , function () { converse.autoAwayReset(); });
+                $(window).on(unloadevent , function () { converse.autoAwayReset(); });
 
                 window.setInterval(function () {
                     if ((this._idleCounter <= this.auto_away || (this.auto_xa > 0 && this._idleCounter <= this.auto_xa)) &&
@@ -527,24 +550,27 @@
             );
         };
 
-        this.reconnect = function () {
-            converse.giveFeedback(__('Reconnecting'), 'error');
-            if (converse.authentication !== "prebind") {
-                this.connection.connect(
-                    this.connection.jid,
-                    this.connection.pass,
-                    function (status, condition) {
-                        converse.onConnStatusChanged(status, condition, true);
-                    },
-                    this.connection.wait,
-                    this.connection.hold,
-                    this.connection.route
-                );
-            } else if (converse.prebind_url) {
-                this.clearSession();
-                this._tearDown();
-                this.startNewBOSHSession();
-            }
+        this.reconnect = function (condition) {
+            converse.log('Attempting to reconnect in 5 seconds');
+            converse.giveFeedback(__('Attempting to reconnect in 5 seconds'), 'error');
+            setTimeout(function () {
+                if (converse.authentication !== "prebind") {
+                    this.connection.connect(
+                        this.connection.jid,
+                        this.connection.pass,
+                        function (status, condition) {
+                            this.onConnectStatusChanged(status, condition, true);
+                        }.bind(this),
+                        this.connection.wait,
+                        this.connection.hold,
+                        this.connection.route
+                    );
+                } else if (converse.prebind_url) {
+                    this.clearSession();
+                    this._tearDown();
+                    this.startNewBOSHSession();
+                }
+            }.bind(this), 5000);
         };
 
         this.renderLoginPanel = function () {
@@ -554,8 +580,10 @@
             view.renderLoginPanel();
         };
 
-        this.onConnStatusChanged = function (status, condition, reconnect) {
+        this.onConnectStatusChanged = function (status, condition, reconnect) {
+            converse.log("Status changed to: "+PRETTY_CONNECTION_STATUS[status]);
             if (status === Strophe.Status.CONNECTED || status === Strophe.Status.ATTACHED) {
+                delete converse.disconnection_cause;
                 if ((typeof reconnect !== 'undefined') && (reconnect)) {
                     converse.log(status === Strophe.Status.CONNECTED ? 'Reconnected' : 'Reattached');
                     converse.onReconnected();
@@ -564,12 +592,12 @@
                     converse.onConnected();
                 }
             } else if (status === Strophe.Status.DISCONNECTED) {
-                if (converse.auto_reconnect) {
-                    converse.reconnect();
+                if (converse.disconnection_cause == Strophe.Status.CONNFAIL && converse.auto_reconnect) {
+                    converse.reconnect(condition);
                 } else {
                     converse.renderLoginPanel();
                 }
-            } else if (status === Strophe.Status.Error) {
+            } else if (status === Strophe.Status.ERROR) {
                 converse.giveFeedback(__('Error'), 'error');
             } else if (status === Strophe.Status.CONNECTING) {
                 converse.giveFeedback(__('Connecting'));
@@ -578,6 +606,9 @@
             } else if (status === Strophe.Status.AUTHFAIL) {
                 converse.giveFeedback(__('Authentication Failed'), 'error');
                 converse.connection.disconnect(__('Authentication Failed'));
+                converse.disconnection_cause = Strophe.Status.AUTHFAIL;
+            } else if (status === Strophe.Status.CONNFAIL) {
+                converse.disconnection_cause = Strophe.Status.CONNFAIL;
             } else if (status === Strophe.Status.DISCONNECTING) {
                 // FIXME: what about prebind?
                 if (!converse.connection.connected) {
@@ -643,7 +674,7 @@
             this.session.id = id; // Appears to be necessary for backbone.browserStorage
             this.session.browserStorage = new Backbone.BrowserStorage[converse.storage](id);
             this.session.fetch();
-            $(window).on('beforeunload', $.proxy(function () {
+            $(window).on(unloadevent, $.proxy(function () {
                 if (converse.connection.authenticated) {
                     this.setSession();
                 } else {
@@ -1336,6 +1367,9 @@
             },
 
             sendMessage: function (text) {
+                if (!converse.connection.authenticated) {
+                    return this.showHelpMessages(['Sorry, the connection has been lost, and your message could not be sent'], 'error');
+                }
                 var match = text.replace(/^\s*/, "").match(/^\/(.*)\s*$/), msgs;
                 if (match) {
                     if (match[1] === "clear") {
@@ -1626,8 +1660,13 @@
             },
 
             maximize: function () {
+                var chatboxviews = converse.chatboxviews;
                 // Restores a minimized chat box
-                this.$el.insertAfter(converse.chatboxviews.get("controlbox").$el).show('fast', $.proxy(function () {
+                this.$el.insertAfter(chatboxviews.get("controlbox").$el).show('fast', $.proxy(function () {
+                    /* Now that the chat box is visible, we can call trimChats
+                     * to make space available if need be.
+                     */
+                    chatboxviews.trimChats(this);
                     converse.refreshWebkit();
                     this.setChatState(ACTIVE).focus();
                     converse.emit('chatBoxMaximized', this);
@@ -3159,6 +3198,11 @@
                 this.fetch({
                     add: true,
                     success: $.proxy(function (collection, resp) {
+                        collection.each(function (chatbox) {
+                            if (chatbox.get('id') !== 'controlbox' && !chatbox.get('minimized')) {
+                                chatbox.trigger('show');
+                            }
+                        });
                         if (!_.include(_.pluck(resp, 'id'), 'controlbox')) {
                             this.add({
                                 id: 'controlbox',
@@ -3312,10 +3356,13 @@
             initialize: function () {
                 this.model.on("add", this.onChatBoxAdded, this);
                 this.model.on("change:minimized", function (item) {
-                    if (item.get('minimized') === false) {
-                         this.trimChats(this.get(item.get('id')));
+                    if (item.get('minimized') === true) {
+                        /* When a chat is minimized in trimChats, trimChats needs to be
+                        * called again (in case the minimized chats toggle is newly shown).
+                        */
+                        this.trimChats();
                     } else {
-                         this.trimChats();
+                        this.trimChats(this.get(item.get('id')));
                     }
                 }, this);
             },
@@ -3388,7 +3435,7 @@
                     }
                 });
 
-                if ((minimized_width + boxes_width + controlbox_width) > this.$el.outerWidth(true)) {
+                if ((minimized_width + boxes_width + controlbox_width) > $('body').outerWidth(true)) {
                     oldest_chat = this.getOldestMaximizedChat();
                     if (oldest_chat && oldest_chat.get('id') !== new_id) {
                         oldest_chat.minimize();
@@ -3411,17 +3458,19 @@
             },
 
             closeAllChatBoxes: function (include_controlbox) {
-                var i, chatbox;
                 // TODO: once Backbone.Overview has been refactored, we should
                 // be able to call .each on the views themselves.
-                this.model.each($.proxy(function (model) {
+                var ids = [];
+                this.model.each(function (model) {
                     var id = model.get('id');
                     if (include_controlbox || id !== 'controlbox') {
-                        if (this.get(id)) { // Should always resolve, but shit happens
-                            this.get(id).close();
-                        }
+                        ids.push(id);
                     }
-                }, this));
+                });
+                ids.forEach(function(id) {
+                    var chatbox = this.get(id);
+                    if (chatbox) { chatbox.close(); }
+                }, this);
                 return this;
             },
 
@@ -3624,9 +3673,12 @@
         this.RosterContact = Backbone.Model.extend({
             initialize: function (attributes, options) {
                 var jid = attributes.jid;
+                var bare_jid = Strophe.getBareJidFromJid(jid);
+                attributes.jid = bare_jid;
                 this.set(_.extend({
-                    'id': Strophe.getBareJidFromJid(jid),
-                    'fullname': jid,
+                    'id': bare_jid,
+                    'jid': bare_jid,
+                    'fullname': bare_jid,
                     'chat_status': 'offline',
                     'user_id': Strophe.getNodeFromJid(jid),
                     'resources': [Strophe.getResourceFromJid(jid)],
@@ -4780,7 +4832,7 @@
                 }, this));
             },
 
-            sendPresence: function (type, status_message) {
+            constructPresence: function (type, status_message) {
                 if (typeof type === 'undefined') {
                     type = this.get('status') || 'online';
                 }
@@ -4813,7 +4865,11 @@
                         presence.c('status').t(status_message);
                     }
                 }
-                converse.connection.send(presence);
+                return presence;
+            },
+
+            sendPresence: function (type, status_message) {
+                converse.connection.send(this.constructPresence(type, status_message));
             },
 
             setStatus: function (value) {
@@ -4923,21 +4979,19 @@
             },
 
             getPrettyStatus: function (stat) {
-                var pretty_status;
                 if (stat === 'chat') {
-                    pretty_status = __('online');
+                    return __('online');
                 } else if (stat === 'dnd') {
-                    pretty_status = __('busy');
+                    return __('busy');
                 } else if (stat === 'xa') {
-                    pretty_status = __('away for long');
+                    return __('away for long');
                 } else if (stat === 'away') {
-                    pretty_status = __('away');
+                    return __('away');
                 } else if (stat === 'offline') {
-                    pretty_status = __('offline');
+                    return __('offline');
                 } else {
-                    pretty_status = __(stat) || __('online');
+                    return __(stat) || __('online');
                 }
-                return pretty_status;
             },
 
             updateStatusUI: function (model) {
@@ -5217,7 +5271,7 @@
                             converse.connection.connect(
                                 that.fields.username+'@'+that.domain,
                                 that.fields.password,
-                                converse.onConnStatusChanged
+                                converse.onConnectStatusChanged
                             );
                             converse.chatboxviews.get('controlbox')
                                 .switchTab({target: that.$tabs.find('.current')})
@@ -5530,7 +5584,7 @@
                         jid += '/converse.js-' + Math.floor(Math.random()*139749825).toString();
                     }
                 }
-                converse.connection.connect(jid, password, converse.onConnStatusChanged);
+                converse.connection.connect(jid, password, converse.onConnectStatusChanged);
             },
 
             remove: function () {
@@ -5629,7 +5683,7 @@
                             response.jid,
                             response.sid,
                             response.rid,
-                            this.onConnStatusChanged
+                            this.onConnectStatusChanged
                     );
                 }.bind(this),
                 error: function (response) {
@@ -5639,8 +5693,66 @@
             });
         };
 
+        this.attemptPreboundSession = function (tokens) {
+            /* Handle session resumption or initialization when prebind is being used.
+             */
+            var rid = tokens.rid, jid = tokens.jid, sid = tokens.sid;
+            if (this.keepalive) {
+                if (!this.jid) {
+                    throw new Error("initConnection: when using 'keepalive' with 'prebind, you must supply the JID of the current user.");
+                }
+                if (rid && sid && jid && Strophe.getBareJidFromJid(jid) === Strophe.getBareJidFromJid(this.jid)) {
+                    this.session.save({rid: rid}); // The RID needs to be increased with each request.
+                    return this.connection.attach(jid, sid, rid, this.onConnectStatusChanged);
+                }
+            } else { // Not keepalive
+                if (this.jid && this.sid && this.rid) {
+                    return this.connection.attach(this.jid, this.sid, this.rid, this.onConnectStatusChanged);
+                } else {
+                    throw new Error("initConnection: If you use prebind and not keepalive, "+
+                        "then you MUST supply JID, RID and SID values");
+                }
+            }
+            // We haven't been able to attach yet. Let's see if there
+            // is a prebind_url, otherwise there's nothing with which
+            // we can attach.
+            if (this.prebind_url) {
+                this.startNewBOSHSession();
+            } else {
+                delete this.connection;
+                this.emit('noResumeableSession');
+            }
+        };
+
+        this.attemptNonPreboundSession = function (tokens) {
+            /* Handle session resumption or initialization when prebind is not being used.
+             *
+             * Two potential options exist and are handled in this method:
+             *  1. keepalive
+             *  2. auto_login
+             */
+            var rid = tokens.rid, jid = tokens.jid, sid = tokens.sid;
+            if (this.keepalive && rid && sid && jid) {
+                this.session.save({rid: rid}); // The RID needs to be increased with each request.
+                this.connection.attach(jid, sid, rid, this.onConnectStatusChanged);
+            } else if (this.auto_login) {
+                if (!this.jid) {
+                    throw new Error("initConnection: If you use auto_login, you also need to provide a jid value");
+                }
+                if (this.authentication === ANONYMOUS) {
+                    this.connection.connect(this.jid, null, this.onConnectStatusChanged);
+                } else if (this.authentication === LOGIN) {
+                    if (!this.password) {
+                        throw new Error("initConnection: If you use auto_login and "+
+                            "authentication='login' then you also need to provide a password.");
+                    }
+                    this.connection.connect(this.jid, this.password, this.onConnectStatusChanged);
+                }
+            }
+        };
+
         this.initConnection = function () {
-            var rid, sid, jid;
+            var tokens = {};
             if (this.connection && this.connection.connected) {
                 this.setUpXMLLogging();
                 this.onConnected();
@@ -5656,52 +5768,17 @@
                     throw new Error("initConnection: this browser does not support websockets and bosh_service_url wasn't specified.");
                 }
                 this.setUpXMLLogging();
-
                 if (this.keepalive) {
-                    rid = this.session.get('rid');
-                    sid = this.session.get('sid');
-                    jid = this.session.get('jid');
-                    if (this.authentication === "prebind") {
-                        if (!this.jid) {
-                            throw new Error("initConnection: when using 'keepalive' with 'prebind, you must supply the JID of the current user.");
-                        }
-                        if (rid && sid && jid && Strophe.getBareJidFromJid(jid) === Strophe.getBareJidFromJid(this.jid)) {
-                            this.session.save({rid: rid}); // The RID needs to be increased with each request.
-                            this.connection.attach(jid, sid, rid, this.onConnStatusChanged);
-                        } else if (this.prebind_url) {
-                            this.startNewBOSHSession();
-                        } else {
-                            delete this.connection;
-                            this.emit('noResumeableSession');
-                        }
-                    } else {
-                        // Non-prebind case.
-                        if (rid && sid && jid) {
-                            this.session.save({rid: rid}); // The RID needs to be increased with each request.
-                            this.connection.attach(jid, sid, rid, this.onConnStatusChanged);
-                        } else if (this.auto_login) {
-                            if (!this.jid) {
-                                throw new Error("initConnection: If you use auto_login, you also need to provide a jid value");
-                            }
-                            if (this.authentication === ANONYMOUS) {
-                                this.connection.connect(this.jid, null, this.onConnStatusChanged);
-                            } else if (this.authentication === LOGIN) {
-                                if (!this.password) {
-                                    throw new Error("initConnection: If you use auto_login and "+
-                                        "authentication='login' then you also need to provide a password.");
-                                }
-                                this.connection.connect(this.jid, this.password, this.onConnStatusChanged);
-                            }
-                        }
-                    }
-                } else if (this.authentication == "prebind") {
-                    // prebind is used without keepalive
-                    if (this.jid && this.sid && this.rid) {
-                        this.connection.attach(this.jid, this.sid, this.rid, this.onConnStatusChanged);
-                    } else {
-                        throw new Error("initConnection: If you use prebind and not keepalive, "+
-                            "then you MUST supply JID, RID and SID values");
-                    }
+                    tokens.rid = this.session.get('rid');
+                    tokens.sid = this.session.get('sid');
+                    tokens.jid = this.session.get('jid');
+                }
+                // We now try to resume or automatically set up a new session.
+                // Otherwise the user will be shown a login form.
+                if (this.authentication === PREBIND) {
+                    this.attemptPreboundSession(tokens);
+                } else {
+                    this.attemptNonPreboundSession(tokens);
                 }
             }
         };
@@ -5745,9 +5822,58 @@
             return this;
         };
 
+        this._overrideAttribute = function (key, plugin) {
+            // See converse.plugins.override
+            var value = plugin.overrides[key];
+            if (typeof value === "function") {
+                if (typeof plugin._super === "undefined") {
+                    plugin._super = {'converse': converse};
+                }
+                plugin._super[key] = converse[key].bind(converse);
+                converse[key] = value.bind(plugin);
+            } else {
+                converse[key] = value;
+            }
+        };
+
+        this._extendObject = function (obj, attributes) {
+            // See converse.plugins.extend
+            if (!obj.prototype._super) {
+                obj.prototype._super = {'converse': converse};
+            }
+            _.each(attributes, function (value, key) {
+                if (key === 'events') {
+                    obj.prototype[key] = _.extend(value, obj.prototype[key]);
+                } else {
+                    if (typeof value === 'function') {
+                        obj.prototype._super[key] = obj.prototype[key];
+                    }
+                    obj.prototype[key] = value;
+                }
+            });
+        };
+
         this._initializePlugins = function () {
             _.each(this.plugins, $.proxy(function (plugin) {
-                $.proxy(plugin, this)(this);
+                plugin.converse = converse;
+                _.each(Object.keys(plugin.overrides), function (key) {
+                    /* We automatically override all methods and Backbone views and
+                     * models that are in the "overrides" namespace.
+                     */
+                    var override = plugin.overrides[key];
+                    if (typeof override == "object") {
+                        this._extendObject(converse[key], override);
+                    } else {
+                        this._overrideAttribute(key, plugin);
+                    }
+                }.bind(this));
+
+                if (typeof plugin.initialize === "function") {
+                    plugin.initialize.bind(plugin)(this);
+                } else {
+                    // This will be deprecated in 0.10
+                    $.proxy(plugin, this)(this);
+                }
             }, this));
         };
 
@@ -5946,34 +6072,35 @@
             converse.ping(jid);
         },
         'plugins': {
-            'add': function (name, callback) {
-                converse.plugins[name] = callback;
+            'add': function (name, plugin) {
+                converse.plugins[name] = plugin;
             },
             'remove': function (name) {
                 delete converse.plugins[name];
             },
+            'override': function (name, value) {
+                /* Helper method for overriding methods and attributes directly on the
+                 * converse object. For Backbone objects, use instead the 'extend'
+                 * method.
+                 *
+                 * If a method is overridden, then the original method will still be
+                 * available via the _super attribute.
+                 *
+                 * name: The attribute being overridden.
+                 * value: The value of the attribute being overridden.
+                 */
+                converse._overrideAttribute(name, value);
+            },
             'extend': function (obj, attributes) {
                 /* Helper method for overriding or extending Converse's Backbone Views or Models
-                *
-                * When a method is overriden, the original will still be available
-                * on the _super attribute of the object being overridden.
-                *
-                * obj: The Backbone View or Model
-                * attributes: A hash of attributes, such as you would pass to Backbone.Model.extend or Backbone.View.extend
-                */
-                if (!obj.prototype._super) {
-                    obj.prototype._super = {};
-                }
-                _.each(attributes, function (value, key) {
-                    if (key === 'events') {
-                        obj.prototype[key] = _.extend(value, obj.prototype[key]);
-                    } else {
-                        if (typeof value === 'function') {
-                            obj.prototype._super[key] = obj.prototype[key];
-                        }
-                        obj.prototype[key] = value;
-                    }
-                });
+                 *
+                 * When a method is overriden, the original will still be available
+                 * on the _super attribute of the object being overridden.
+                 *
+                 * obj: The Backbone View or Model
+                 * attributes: A hash of attributes, such as you would pass to Backbone.Model.extend or Backbone.View.extend
+                 */
+                converse._extendObject(obj, attributes);
             }
         },
         'env': {
