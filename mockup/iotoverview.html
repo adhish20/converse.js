@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title id="pageTitle">Converse.js: Mockup</title>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="description" content="Converse.js: Mockup" />
+    <link type="text/css" href="../css/theme.css" rel="stylesheet" media="screen" />
+    <link type="text/css" href="../css/converse.css" rel="stylesheet" media="screen" />
+    <script src="../components/jquery/dist/jquery.min.js"></script>
+</head>
+<body id="page-top" data-spy="scroll" data-target=".navbar-custom">
+
+<!-- HEADER -->
+<div id="header_wrap" class="outer">
+    <header class="inner">
+        <h1 id="project_title"><a href="http://conversejs.org">Converse.js</a></h1>
+        <h2 id="project_tagline">Static Mockup IoT overview</h2>
+    </header>
+</div>
+
+<div id="conversejs"><a style="display: none;" class="toggle-controlbox" id="toggle-controlbox" href="#"><span class="conn-feedback">Contacts</span>
+<span style="" id="online-count">(1)</span>
+</a><div style="display: block;" class="chatbox" id="controlbox"><div class="box-flyout" style="height: 400px">
+    <div class="dragresize dragresize-tm"></div>
+    <div class="chat-head controlbox-head">
+        <ul id="controlbox-tabs"><li><a class="s current" href="#users">Contacts</a></li>
+<li><a class="s" href="#chatrooms">Rooms</a></li>
+</ul>
+        <a class="close-chatbox-button icon-close"></a>
+    </div>
+    <div class="controlbox-panes"><div class="controlbox-pane" id="users"><form class="set-xmpp-status" action="" method="post">
+    <span id="xmpp-status-holder"><dl id="target" class="dropdown">
+    <dt id="fancy-xmpp-status-select" class="fancy-dropdown"><div class="xmpp-status">
+    <a class="choose-xmpp-status online" data-value="I am online" href="#" title="Click to change your chat status">
+
+        <span class="icon-online"></span>I am online
+    </a>
+    <a class="change-xmpp-status-message icon-pencil" href="#" title="Click here to write a custom status message"></a>
+</div>
+</dt>
+    <dd><ul style="display: none;" class="xmpp-status-menu"><li>
+    <a href="#" class="online" data-value="online">
+        <span class="icon-online"></span>
+        Online
+    </a>
+</li>
+<li>
+    <a href="#" class="dnd" data-value="dnd">
+        <span class="icon-dnd"></span>
+        Busy
+    </a>
+</li>
+<li>
+    <a href="#" class="away" data-value="away">
+        <span class="icon-away"></span>
+        Away
+    </a>
+</li>
+<li>
+    <a href="#" class="offline" data-value="offline">
+        <span class="icon-offline"></span>
+        Offline
+    </a>
+</li>
+<li>
+    <a href="#" class="logout" data-value="logout">
+        <span class="icon-logout"></span>
+        Log out
+    </a>
+</li>
+</ul></dd>
+</dl>
+</span>
+</form>
+<dl class="add-converse-contact dropdown">
+    <dt id="xmpp-contact-search" class="fancy-dropdown">
+        <a class="toggle-xmpp-contact-form" href="#" title="Click to add new chat contacts">
+        <span class="icon-plus"></span>Add a contact</a>
+    </dt>
+    <dd class="search-xmpp" style="display:none"><ul><li>
+    <form class="add-xmpp-contact">
+        <input name="identifier" class="username" placeholder="e.g. user@example.com" type="text">
+        <button type="submit">Add</button>
+    </form>
+</li>
+</ul></dd>
+</dl>
+<div id="converse-roster"><span class="input-button-group">
+    <input style="display: none;" class="roster-filter" placeholder="Type to filter">
+    <select style="display: none;" class="filter-type">
+        <option value="contacts">Contacts</option>
+        <option value="groups">Groups</option>
+    </select>
+</span>
+<dl class="roster-contacts" style="display: block;"><dt style="display: block;" data-group="Ungrouped" class="roster-group"><a href="#" class="group-toggle icon-opened" title="Click to hide these contacts">Ungrouped</a></dt><dd class="online current-xmpp-contact both"><a class="open-chat" title="Name: device1@xmpp.xmpp-iot.org
+JID: device1@xmpp.xmpp-iot.org
+Click to chat with this contact" href="#"><span class="icon-online" title="This contact is online"></span>device1@xmpp.xmpp-iot.org</a>
+
+<a class="remove-xmpp-contact icon-remove" title="Click to remove this contact" href="#"></a>
+
+</dd><dd style="display: block;" class="offline current-xmpp-contact both"><a class="open-chat" title="Name: lsys jocke
+JID: jocke@xmpp.lsys.se
+Click to chat with this contact" href="#"><span class="icon-offline" title="This contact is offline"></span>lsys jocke</a>
+
+<a class="remove-xmpp-contact icon-remove" title="Click to remove this contact" href="#"></a>
+
+</dd><dt style="display: block;" data-group="Pending contacts" class="roster-group"><a href="#" class="group-toggle icon-opened" title="Click to hide these contacts">Pending contacts</a></dt><dd style="display: block;" class="offline pending-xmpp-contact"><span class="pending-contact-name" title="Name: adhish@xmpp.xmpp-iot.org
+JID: adhish@xmpp.xmpp-iot.org">adhish@xmpp.xmpp-iot.org</span> <a class="remove-xmpp-contact icon-remove" title="Click to remove this contact" href="#"></a>
+</dd></dl></div></div>
+
+<div style="display: none;" class="controlbox-pane" id="chatrooms"><form class="add-chatroom" action="" method="post">
+  <label>Room name</label>
+  <input name="chatroom" class="new-chatroom-name" placeholder="Room name" type="text">
+  <label>Nickname</label>
+  <input name="nick" class="new-chatroom-nick" placeholder="Nickname" type="text">
+  
+  <label>Server</label>
+  
+  <input name="server" class="new-chatroom-server" placeholder="Server" type="text">
+<div class="button-group">
+  <input class="left" name="join" value="Join Room" type="submit">
+  <input class="right" name="show" id="show-rooms" value="Show rooms" type="button">
+</div>
+</form>
+<dl id="available-chatrooms"></dl>
+</div></div>
+</div>
+</div>
+
+
+<div id="iY0aP9AzBg/J1fRwEyhmSOq9S30=" style="display: block;" class="chatbox"><div class="box-flyout" style="height: 400px">
+<div class="dragresize dragresize-tm"></div>
+<div class="chat-head chat-head-chatbox">
+  <a class="close-chatbox-button icon-close"></a>
+  <a class="toggle-chatbox-button icon-minus"></a>
+  <canvas height="32px" width="32px" class="avatar"></canvas><div class="chat-title">
+    
+    lsys jocke
+    
+  </div>
+  <p title="" class="user-custom-message"></p><p></p>
+  </div>
+  <div class="chat-body">
+  <div class="chat-content">
+  <div class="chat-message ">
+    <span class="chat-message-me">NodeName1:&nbsp;</span>
+  </div>
+  <div class="chat-message ">  
+    <span class="chat-message-content"></br>&nbsp; motorspeed: 400
+    Rpm</span>
+        <span class="chat-message-content"></br>&nbsp; speedsetpoint: 390 Rpm</span>
+  </div>
+  <div class="chat-message ">
+    <span class="chat-message-them">Nodename2:</span>
+    <span class="chat-message-content"></br>&nbsp; outsideTemp: 42.2 C</span>
+    <span class="chat-message-content"></br>&nbsp; insideTemp: 42.2 F</span>
+    <span class="chat-message-content"></br>&nbsp; airpressure: 23
+    Pa</span>
+        <span class="chat-message-content"></br>&nbsp; pressureSetpoint: 23 Pa</span>
+  </div>
+  
+
+    </div>
+        <form class="sendXMPPMessage" action="" method="post">
+            
+  <ul class="chat-toolbar no-text-select">
+    <li class="toggle-smiley icon-happy" title="Insert a smiley">
+        <ul>
+            <li><a class="icon-smiley" href="#" data-emoticon=":)"></a></li>
+            <li><a class="icon-wink" href="#" data-emoticon=";)"></a></li>
+            <li><a class="icon-grin" href="#" data-emoticon=":D"></a></li>
+            <li><a class="icon-tongue" href="#" data-emoticon=":P"></a></li>
+            <li><a class="icon-cool" href="#" data-emoticon="8)"></a></li>
+            <li><a class="icon-evil" href="#" data-emoticon=">:)"></a></li>
+            <li><a class="icon-confused" href="#" data-emoticon=":S"></a></li>
+            <li><a class="icon-wondering" href="#" data-emoticon=":\"></a></li>
+            <li><a class="icon-angry" href="#" data-emoticon=">:("></a></li>
+            <li><a class="icon-sad" href="#" data-emoticon=":("></a></li>
+            <li><a class="icon-shocked" href="#" data-emoticon=":O"></a></li>
+            <li><a class="icon-thumbs-up" href="#" data-emoticon="(^.^)b"></a></li>
+            <li><a class="icon-heart" href="#" data-emoticon="<3"></a></li>
+        </ul>
+    </li>
+    <li>
+                        <select name="IoT#fieldname_write"><option
+    value="writablefields" selected="selected">pressureSetpoint</option>
+                            <option value="speadSetpoints">speadSetting</option>
+                        </select>
+			</li>
+
+
+<li class="toggle-clear"><a class="icon-thumbs-up" title="Reread values"></a></li>
+
+
+    <li class="toggle-otr unencrypted" title="Your messages are not encrypted. Click here to enable OTR encryption.">
+        <span class="chat-toolbar-text">unencrypted</span>
+        
+            <span class="icon-unlocked"></span>
+        
+        
+        
+        
+        <ul>
+            
+               <li><a class="start-otr" href="#">Start encrypted conversation</a></li>
+            
+            
+            
+            <li><a href="http://www.cypherpunks.ca/otr/help/3.2.0/levels.php" target="_blank">What's this?</a></li>
+        </ul>
+    </li>
+
+</ul>
+            
+        <textarea type="text" class="chat-textarea" placeholder="Value To write"></textarea>
+        </form>
+    </div>
+</div>
+</div><div id="jt73u0r6lt6VOfeWJuOpMH8f6vg=" style="display: block;" class="chatbox"><div class="box-flyout" style="height: 400px">
+    <div class="dragresize dragresize-tm"></div>
+    <div class="chat-head chat-head-chatbox">
+        <a class="close-chatbox-button icon-close"></a>
+        <a class="toggle-chatbox-button icon-minus"></a>
+        <div class="chat-title">
+            
+                    device1@xmpp.xmpp-iot.org
+            
+        </div>
+        <p title="" class="user-custom-message"></p><p></p>
+    </div>
+    <div class="chat-body">
+        <div class="chat-content"><div class="chat-message ">
+    <span class="chat-message-me">10:09 me:&nbsp;</span>
+    <span class="chat-message-content">hi</span>
+</div><div class="chat-message ">
+    <span class="chat-message-them">10:09 device1@xmpp.xmpp-iot.org:&nbsp;</span>
+    <span class="chat-message-content">I am device1@xmpp.xmpp-iot.org/a0728247 and I am on localIP 192.168.1.6 and on internet 217.210.244.99
+</span>
+</div><div class="chat-message ">
+    <span class="chat-message-me">10:10 me:&nbsp;</span>
+    <span class="chat-message-content">?</span>
+</div><div class="chat-message ">
+    <span class="chat-message-them">10:10 device1@xmpp.xmpp-iot.org:&nbsp;</span>
+    <span class="chat-message-content">{'Counter': {'flags': {'momentary': 'true', 'automaticReadout': 'true'}, 'value': '1'}, 'Relay': {'flags': {'writable': 'true', 'momentary': 'true', 'automaticReadout': 'true'}, 'value': '0'}}</span>
+</div><div class="chat-message ">
+    <span class="chat-message-me">10:19 me:&nbsp;</span>
+    <span class="chat-message-content">hi</span>
+</div><div class="chat-message ">
+    <span class="chat-message-them">10:19 device1@xmpp.xmpp-iot.org:&nbsp;</span>
+    <span class="chat-message-content">I am device1@xmpp.xmpp-iot.org/a0728247 and I am on localIP 192.168.1.6 and on internet 217.210.244.99
+</span>
+</div></div>
+        <form class="sendXMPPMessage" action="" method="post">
+            
+                <ul class="chat-toolbar no-text-select">
+    <li class="toggle-smiley icon-happy" title="Insert a smiley">
+        <ul>
+            <li><a class="icon-smiley" href="#" data-emoticon=":)"></a></li>
+            <li><a class="icon-wink" href="#" data-emoticon=";)"></a></li>
+            <li><a class="icon-grin" href="#" data-emoticon=":D"></a></li>
+            <li><a class="icon-tongue" href="#" data-emoticon=":P"></a></li>
+            <li><a class="icon-cool" href="#" data-emoticon="8)"></a></li>
+            <li><a class="icon-evil" href="#" data-emoticon=">:)"></a></li>
+            <li><a class="icon-confused" href="#" data-emoticon=":S"></a></li>
+            <li><a class="icon-wondering" href="#" data-emoticon=":\"></a></li>
+            <li><a class="icon-angry" href="#" data-emoticon=">:("></a></li>
+            <li><a class="icon-sad" href="#" data-emoticon=":("></a></li>
+            <li><a class="icon-shocked" href="#" data-emoticon=":O"></a></li>
+            <li><a class="icon-thumbs-up" href="#" data-emoticon="(^.^)b"></a></li>
+            <li><a class="icon-heart" href="#" data-emoticon="<3"></a></li>
+        </ul>
+    </li>
+
+
+
+
+<li class="toggle-clear"><a class="icon-remove" title="Clear all messages"></a></li>
+
+
+    <li class="toggle-otr unencrypted" title="Your messages are not encrypted. Click here to enable OTR encryption.">
+        <span class="chat-toolbar-text">unencrypted</span>
+        
+            <span class="icon-unlocked"></span>
+        
+        
+        
+        
+        <ul>
+            
+               <li><a class="start-otr" href="#">Start encrypted conversation</a></li>
+            
+            
+            
+            <li><a href="http://www.cypherpunks.ca/otr/help/3.2.0/levels.php" target="_blank">What's this?</a></li>
+        </ul>
+    </li>
+
+</ul>
+            
+        <textarea type="text" class="chat-textarea" placeholder="Personal message"></textarea>
+        </form>
+    </div>
+</div>
+</div><div style="" id="minimized-chats">
+    <a id="toggle-minimized-chats" href="#"></a>
+    <div class="minimized-chats-flyout"></div>
+</div>
+</div>
+
+</body> </html>
