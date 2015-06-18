@@ -2081,6 +2081,10 @@
                         $(target).attr('data-room-jid'),
                         null,
                         $.proxy(function (stanza) {
+                            converse.log("Room jid : "+$(target).attr('data-room-jid'));
+                            $(stanza).find('feature').each(function() {
+                                converse.log("var : "+$(this).attr('var'));
+                            });
                             var $stanza = $(stanza);
                             // All MUC features found here: http://xmpp.org/registrar/disco-features.html
                             $dd.find('span.spinner').replaceWith(
@@ -4162,12 +4166,15 @@
                 converse.connection.disco.info(
                     from,
                     null,
-                    $.proxy(function (stanza) {
-                        var $stanza = $(stanza);
-                        contact.save({'support_0323': $stanza.find('feature[var="urn:xmpp:iot:sensordata"]').length});
+                    $.proxy(function (item) {
+                        $(item).find('feature').each(function() {
+                            converse.log("var : "+$(this).attr('var'));
+                        });
+                        var $item = $(item);
+                        contact.save({'support_0323': $item.find('feature[var="urn:xmpp:iot:sensordata"]').length});
                         converse.log(from + " 0323 " + contact.get('support_0323'));
-                        contact.save({'support_0325': $stanza.find('feature[var="urn:xmpp:iot:control"]').length});
-                        converse.log(from + " 0325 " + $stanza.find('feature[var="urn:xmpp:iot:control"]').length);
+                        contact.save({'support_0325': $item.find('feature[var="urn:xmpp:iot:control"]').length});
+                        converse.log(from + " 0325 " + $item.find('feature[var="urn:xmpp:iot:control"]').length);
                     }, this));
             },
 
