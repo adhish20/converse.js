@@ -251,7 +251,7 @@
             }
             return ret;
         };
-		
+        
         this.detectLocale = function () {
             ret = null;
             if (window.navigator.userLanguage) {
@@ -457,7 +457,7 @@
             }
         };
 
-		
+        
         this.playNotification = function () {
             var audio;
             if (converse.play_sounds && typeof Audio !== "undefined") {
@@ -768,7 +768,7 @@
             }
             return false;
         };
-		
+        
         this.pong = function (ping) {
             converse.lastStanzaDate = new Date();
             converse.connection.ping.pong(ping);
@@ -854,7 +854,7 @@
             this.enableCarbons();
             this.initStatus($.proxy(function () {
                 this.registerPingHandler();
-                this.registerAutoAwayHandler();				
+                this.registerAutoAwayHandler();             
                 this.chatboxes.onConnected();
                 this.giveFeedback(__('Contacts'));
                 if (this.callback) {
@@ -1925,6 +1925,29 @@
             }
         });
 
+        this.IoTPanel = Backbone.View.extend({
+            tagName: 'div',
+            className: 'controlbox-pane',
+            id: 'iot-nodes',
+            events: {
+
+            },
+
+            initialize: function (cfg) {
+                this.$parent = cfg.$parent;
+                this.$tabs = cfg.$parent.parent().find('#controlbox-tabs');
+            },
+
+            render: function () {
+                this.$parent.append(this.$el.html(
+                    converse.templates.iot_panel({
+                    })
+                ).hide());
+                this.$tabs.append(converse.templates.iot_tab({label_iot: __('IoT')}));
+                return this;
+            }
+        });
+
         this.RoomsPanel = Backbone.View.extend({
             tagName: 'div',
             className: 'controlbox-pane',
@@ -2254,20 +2277,22 @@
                 this.contactspanel.render();
                 converse.xmppstatusview = new converse.XMPPStatusView({'model': converse.xmppstatus});
                 converse.xmppstatusview.render();
-                if (converse.allow_muc) {
-                    this.roomspanel = new converse.RoomsPanel({
-                        '$parent': this.$el.find('.controlbox-panes'),
-                        'model': new (Backbone.Model.extend({
-                            id: b64_sha1('converse.roomspanel'+converse.bare_jid), // Required by sessionStorage
-                            browserStorage: new Backbone.BrowserStorage[converse.storage](
-                                b64_sha1('converse.roomspanel'+converse.bare_jid))
-                        }))()
-                    });
-                    this.roomspanel.render().model.fetch();
-                    if (!this.roomspanel.model.get('nick')) {
-                        this.roomspanel.model.save({nick: Strophe.getNodeFromJid(converse.bare_jid)});
-                    }
-                }
+                //if (converse.allow_muc) {
+                //    this.roomspanel = new converse.RoomsPanel({
+                //        '$parent': this.$el.find('.controlbox-panes'),
+                //        'model': new (Backbone.Model.extend({
+                //            id: b64_sha1('converse.roomspanel'+converse.bare_jid), // Required by sessionStorage
+                //            browserStorage: new Backbone.BrowserStorage[converse.storage](
+                //                b64_sha1('converse.roomspanel'+converse.bare_jid))
+                //        }))()
+                //    });
+                //    this.roomspanel.render().model.fetch();
+                //    if (!this.roomspanel.model.get('nick')) {
+                //        this.roomspanel.model.save({nick: Strophe.getNodeFromJid(converse.bare_jid)});
+                //    }
+                //}
+                this.iotpanel = new converse.IoTPanel({'$parent': this.$el.find('.controlbox-panes')});
+                this.iotpanel.render();
                 this.initDragResize();
             },
 
@@ -2578,7 +2603,7 @@
                 this.toggleOccupants();
                 return this;
             },
-			
+            
             toggleOccupants: function (ev) {
                 if (ev) {
                     ev.preventDefault();
@@ -3685,7 +3710,9 @@
                     'groups': [],
                     'image_type': 'image/png',
                     'image': "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",
-                    'status': ''
+                    'status': '',
+                    'support_0323': '',
+                    'support_0325': ''
                 }, attributes));
 
                 this.on('destroy', function () { this.removeFromRoster(); }.bind(this));
@@ -4114,6 +4141,7 @@
                 converse.emit('roster', iq);
                 $(iq).children('query').find('item').each(function (idx, item) {
                     this.updateContact(item);
+                    this.identifyDevices(item);
                 }.bind(this));
                 if (!converse.initial_presence_sent) {
                     /* Once we've sent out our initial presence stanza, we'll
@@ -4125,6 +4153,22 @@
                     converse.initial_presence_sent = 1;
                     converse.xmppstatus.sendPresence();
                 }
+            },
+
+            identifyDevices: function(item){
+                var from = item.getAttribute('jid'),
+                contact = this.get(from);
+                converse.log("Hello "+from);
+                converse.connection.disco.info(
+                    from,
+                    null,
+                    $.proxy(function (stanza) {
+                        var $stanza = $(stanza);
+                        contact.save({'support_0323': $stanza.find('feature[var="urn:xmpp:iot:sensordata"]').length});
+                        converse.log(from + " 0323 " + contact.get('support_0323'));
+                        contact.save({'support_0325': $stanza.find('feature[var="urn:xmpp:iot:control"]').length});
+                        converse.log(from + " 0325 " + $stanza.find('feature[var="urn:xmpp:iot:control"]').length);
+                    }, this));
             },
 
             updateContact: function (item) {
