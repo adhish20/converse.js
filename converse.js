@@ -763,7 +763,7 @@
             if (typeof success === 'undefined' ) { success = null; }
             if (typeof error === 'undefined' ) { error = null; }
             if (converse.connection) {
-                converse.connection.ping.ping(jid, success, error, timeout);
+                converse.connection.ping(jid, success, error, timeout);
                 return true;
             }
             return false;
@@ -1374,6 +1374,16 @@
                 if (match) {
                     if (match[1] === "clear") {
                         return this.clearMessages();
+                    }
+                    else if (match[1] === "read") {
+                        var jid = this.model.get('jid');
+                        var iq = $iq({type: "get", to: jid, from: converse.connection.jid}).c("req", {xmlns: "urn:xmpp:iot:sensordata", momentary: "true"}).tree();
+                        converse.log(iq.toString());
+                        converse.connection.sendIQ(iq,function (message){converse.log(message);},function (err){converse.log(err);},600000);
+                        //converse.log("##### Sensor Data : "+seqnr);
+                        //msgs = [];
+                        //this.showHelpMessages(msgs);
+                        return;
                     }
                     else if (match[1] === "help") {
                         msgs = [
