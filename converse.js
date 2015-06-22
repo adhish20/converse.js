@@ -1376,13 +1376,25 @@
                         return this.clearMessages();
                     }
                     else if (match[1] === "read") {
-                        var jid = this.model.get('jid');
-                        var iq = $iq({type: "get", to: jid, from: converse.connection.jid}).c("req", {xmlns: "urn:xmpp:iot:sensordata", momentary: "true"}).tree();
+                        var jid = this.model.get('jid'),
+                        contact = converse.roster.get(jid);
+                        var resources = contact.get('resources');
+                        for (index = 0; index < resources.length; index++)
+                        {
+                            //converse.log("Resources of "+jid+" is "+resources[index]);
+                        var jid_to = jid+'/'+resources[index];
+                        var iq = $iq({type: "get", to: jid_to, from: converse.connection.jid}).c("req", {xmlns: "urn:xmpp:iot:sensordata", momentary: "true"});
                         converse.log(iq.toString());
-                        converse.connection.sendIQ(iq,function (message){converse.log(message);},function (err){converse.log(err);},600000);
-                        //converse.log("##### Sensor Data : "+seqnr);
-                        //msgs = [];
-                        //this.showHelpMessages(msgs);
+                        converse.connection.sendIQ(iq,
+                            function (message){
+                                converse.log(message);
+                            },
+                            function (err){
+                                converse.log(err);
+                            },
+                            600000
+                        );
+                        }
                         return;
                     }
                     else if (match[1] === "help") {
@@ -3226,6 +3238,12 @@
                         this.onInvite(message);
                         return true;
                     }, this), 'jabber:x:conference', 'message');
+// IoT read message handler
+                converse.connection.addHandler(
+                    $.proxy(function (message) {
+                        this.readValues(message);
+                        return true;
+                    }, this), null, 'message');
             },
 
             onConnected: function () {
@@ -3262,6 +3280,17 @@
                         $msg.find(GONE).length !== 0
                     )
                 );
+            },
+
+            readValues: function (message) {
+                var tag = $(message).find('fields');
+                $(tag).find('node').each(function() {
+                    $(this).find('timestamp').each(function() {
+                        $(this).find('numeric').each(function() {
+                            converse.log($(this).attr('name')+" : "+$(this).attr('value'));
+                        });
+                    });
+                });
             },
 
             onInvite: function (message) {
@@ -4153,7 +4182,6 @@
                 converse.emit('roster', iq);
                 $(iq).children('query').find('item').each(function (idx, item) {
                     this.updateContact(item);
-                    //this.identifyDevices(item.getAttribute('jid'));
                 }.bind(this));
                 if (!converse.initial_presence_sent) {
                     /* Once we've sent out our initial presence stanza, we'll
@@ -4168,16 +4196,8 @@
             },
 
             identifyDevices: function(from){
-                //var bare_jid = Strophe.getBareJidFromJid(from),
-                //contact = this.get(bare_jid),
-                //resources = contact.get('resources');
-                //for(res in resources){
-                //    var jid = from + '/' + res;
-                //    converse.log("Hello "+jid);
-                //}
-                //var from = 'device1@xmpp.xmpp-iot.org/6c86c157';
-                    //converse.log("Hello "+from);
-                    converse.connection.disco.info(
+                var contact = this.get(from);
+                converse.connection.disco.info(
                     from,
                     null,
                     $.proxy(function (item) {
@@ -4189,8 +4209,7 @@
                 //        converse.log(from + " 0323 " + contact.get('support_0323'));
                 //        contact.save({'support_0325': $item.find('feature[var="urn:xmpp:iot:control"]').length});
                 //        converse.log(from + " 0325 " + $item.find('feature[var="urn:xmpp:iot:control"]').length);
-                    }, this));
-                //}
+                }, this));
             },
 
             updateContact: function (item) {
