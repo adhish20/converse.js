@@ -2291,22 +2291,20 @@
                 this.contactspanel.render();
                 converse.xmppstatusview = new converse.XMPPStatusView({'model': converse.xmppstatus});
                 converse.xmppstatusview.render();
-                //if (converse.allow_muc) {
-                //    this.roomspanel = new converse.RoomsPanel({
-                //        '$parent': this.$el.find('.controlbox-panes'),
-                //        'model': new (Backbone.Model.extend({
-                //            id: b64_sha1('converse.roomspanel'+converse.bare_jid), // Required by sessionStorage
-                //            browserStorage: new Backbone.BrowserStorage[converse.storage](
-                //                b64_sha1('converse.roomspanel'+converse.bare_jid))
-                //        }))()
-                //    });
-                //    this.roomspanel.render().model.fetch();
-                //    if (!this.roomspanel.model.get('nick')) {
-                //        this.roomspanel.model.save({nick: Strophe.getNodeFromJid(converse.bare_jid)});
-                //    }
-                //}
-                this.iotpanel = new converse.IoTPanel({'$parent': this.$el.find('.controlbox-panes')});
-                this.iotpanel.render();
+                if (converse.allow_muc) {
+                    this.roomspanel = new converse.RoomsPanel({
+                        '$parent': this.$el.find('.controlbox-panes'),
+                        'model': new (Backbone.Model.extend({
+                            id: b64_sha1('converse.roomspanel'+converse.bare_jid), // Required by sessionStorage
+                            browserStorage: new Backbone.BrowserStorage[converse.storage](
+                                b64_sha1('converse.roomspanel'+converse.bare_jid))
+                        }))()
+                    });
+                    this.roomspanel.render().model.fetch();
+                    if (!this.roomspanel.model.get('nick')) {
+                        this.roomspanel.model.save({nick: Strophe.getNodeFromJid(converse.bare_jid)});
+                    }
+                }
                 this.initDragResize();
             },
 
@@ -4155,7 +4153,7 @@
                 converse.emit('roster', iq);
                 $(iq).children('query').find('item').each(function (idx, item) {
                     this.updateContact(item);
-                    this.identifyDevices(item);
+                    //this.identifyDevices(item.getAttribute('jid'));
                 }.bind(this));
                 if (!converse.initial_presence_sent) {
                     /* Once we've sent out our initial presence stanza, we'll
@@ -4169,11 +4167,17 @@
                 }
             },
 
-            identifyDevices: function(item){
-                var from = item.getAttribute('jid'),
-                contact = this.get(from);
-                converse.log("Hello "+from);
-                converse.connection.disco.info(
+            identifyDevices: function(from){
+                //var bare_jid = Strophe.getBareJidFromJid(from),
+                //contact = this.get(bare_jid),
+                //resources = contact.get('resources');
+                //for(res in resources){
+                //    var jid = from + '/' + res;
+                //    converse.log("Hello "+jid);
+                //}
+                //var from = 'device1@xmpp.xmpp-iot.org/6c86c157';
+                    //converse.log("Hello "+from);
+                    converse.connection.disco.info(
                     from,
                     null,
                     $.proxy(function (item) {
@@ -4181,11 +4185,12 @@
                             converse.log("var : "+$(this).attr('var'));
                         });
                         var $item = $(item);
-                        contact.save({'support_0323': $item.find('feature[var="urn:xmpp:iot:sensordata"]').length});
-                        converse.log(from + " 0323 " + contact.get('support_0323'));
-                        contact.save({'support_0325': $item.find('feature[var="urn:xmpp:iot:control"]').length});
-                        converse.log(from + " 0325 " + $item.find('feature[var="urn:xmpp:iot:control"]').length);
+                //        contact.save({'support_0323': $item.find('feature[var="urn:xmpp:iot:sensordata"]').length});
+                //        converse.log(from + " 0323 " + contact.get('support_0323'));
+                //        contact.save({'support_0325': $item.find('feature[var="urn:xmpp:iot:control"]').length});
+                //        converse.log(from + " 0325 " + $item.find('feature[var="urn:xmpp:iot:control"]').length);
                     }, this));
+                //}
             },
 
             updateContact: function (item) {
@@ -4285,6 +4290,7 @@
                     chat_status = $presence.find('show').text() || 'online',
                     status_message = $presence.find('status'),
                     contact = this.get(bare_jid);
+                this.identifyDevices(jid);
                 if (this.isSelf(bare_jid)) {
                     if ((converse.connection.jid !== jid)&&(presence_type !== 'unavailable')) {
                         // Another resource has changed it's status, we'll update ours as well.
