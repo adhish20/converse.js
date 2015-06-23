@@ -1382,18 +1382,18 @@
                         for (index = 0; index < resources.length; index++)
                         {
                             //converse.log("Resources of "+jid+" is "+resources[index]);
-                        var jid_to = jid+'/'+resources[index];
-                        var iq = $iq({type: "get", to: jid_to, from: converse.connection.jid}).c("req", {xmlns: "urn:xmpp:iot:sensordata", momentary: "true"});
-                        converse.log(iq.toString());
-                        converse.connection.sendIQ(iq,
-                            function (message){
-                                converse.log(message);
-                            },
-                            function (err){
-                                converse.log(err);
-                            },
-                            600000
-                        );
+                            var jid_to = jid+'/'+resources[index];
+                            var iq = $iq({type: "get", to: jid_to, from: converse.connection.jid}).c("req", {xmlns: "urn:xmpp:iot:sensordata", momentary: "true"});
+                            converse.log(iq.toString());
+                            converse.connection.sendIQ(iq,
+                                function (message){
+                                    converse.log(message);
+                                },
+                                function (err){
+                                    converse.log(err);
+                                },
+                                600000
+                            );
                         }
                         return;
                     }
@@ -3283,14 +3283,19 @@
             },
 
             readValues: function (message) {
+                var $message = $(message);
+                var msgs = [];
                 var tag = $(message).find('fields');
                 $(tag).find('node').each(function() {
                     $(this).find('timestamp').each(function() {
                         $(this).find('numeric').each(function() {
                             converse.log($(this).attr('name')+" : "+$(this).attr('value'));
+                            msgs.push('<strong>'+$(this).attr('name')+' : '+'</strong>'+__($(this).attr('value'))+'');
                         });
                     });
                 });
+                chatbox = this.get(Strophe.getBareJidFromJid($message.attr('from')));
+                chatbox.trigger('showHelpMessages',(msgs));
             },
 
             onInvite: function (message) {
