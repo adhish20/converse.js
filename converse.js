@@ -854,7 +854,7 @@
             this.enableCarbons();
             this.initStatus($.proxy(function () {
                 this.registerPingHandler();
-                this.registerAutoAwayHandler();             
+                this.registerAutoAwayHandler();
                 this.chatboxes.onConnected();
                 this.giveFeedback(__('Contacts'));
                 if (this.callback) {
@@ -1639,6 +1639,8 @@
                         this.showStatusNotification(fullname+' '+__('is busy'));
                     } else if (chat_status === 'online') {
                         this.$el.find('div.chat-event').remove();
+                    } else if (chat_status === 'wrench') {
+                        this.showStatusNotification(fullname+' '+__('is an IoT Device'));
                     }
                 }
                 converse.emit('contactStatusChanged', item.attributes, item.get('chat_status'));
@@ -3257,6 +3259,9 @@
                             if (chatbox.get('id') !== 'controlbox' && !chatbox.get('minimized')) {
                                 chatbox.trigger('show');
                             }
+                            else if (chatbox.get('id') === 'controlbox'){
+                                //converse.rosterview.render();
+                            }
                         });
                         if (!_.include(_.pluck(resp, 'id'), 'controlbox')) {
                             this.add({
@@ -4099,6 +4104,7 @@
                         deferred.resolve(err);
                     }
                 );
+                converse.roster.identifyDevices(jid);
                 return deferred.promise();
             },
 
@@ -4205,15 +4211,20 @@
                     from,
                     null,
                     $.proxy(function (item) {
-                        $(item).find('feature').each(function() {
-                            converse.log("var : "+$(this).attr('var'));
-                        });
+                        //$(item).find('feature').each(function() {
+                        //    converse.log("var : "+$(this).attr('var'));
+                        //});
                         var $item = $(item);
                         var contact = converse.roster.get(Strophe.getBareJidFromJid(from));
-                        contact.set({'support_0323': $item.find('feature[var="urn:xmpp:iot:sensordata"]').length});
-                        contact.set({'support_0325': $item.find('feature[var="urn:xmpp:iot:control"]').length});
-                        contact.set({'chat_status':'wrench'});
-                        converse.emit('contactStatusChanged', contact.attributes, contact.get('chat_status'));
+                        if(contact != null)
+                        {
+                            contact.set({'support_0323': $item.find('feature[var="urn:xmpp:iot:sensordata"]').length});
+                            contact.set({'support_0325': $item.find('feature[var="urn:xmpp:iot:control"]').length});
+                            if(contact.get('support_0325') == 1 && contact.get('support_0323') == 1){
+                                contact.set({'chat_status':'wrench'});
+                                converse.emit('contactStatusChanged', contact.attributes, contact.get('chat_status'));
+                            }
+                        }
                 }, this));
             },
 
@@ -4394,6 +4405,7 @@
             },
 
             addContact: function (contact) {
+                converse.roster.identifyDevices(contact.get('jid'));
                 var view = new converse.RosterContactView({model: contact});
                 this.add(contact.get('id'), view);
                 view = this.positionContact(contact).render();
