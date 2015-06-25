@@ -1382,18 +1382,21 @@
                         for (index = 0; index < resources.length; index++)
                         {
                             //converse.log("Resources of "+jid+" is "+resources[index]);
-                            var jid_to = jid+'/'+resources[index];
-                            var iq = $iq({type: "get", to: jid_to, from: converse.connection.jid}).c("req", {xmlns: "urn:xmpp:iot:sensordata", momentary: "true"});
-                            converse.log(iq.toString());
-                            converse.connection.sendIQ(iq,
-                                function (message){
-                                    converse.log(message);
-                                },
-                                function (err){
-                                    converse.log(err);
-                                },
-                                600000
-                            );
+                            if(resources[index] != null)
+                            {
+                                var jid_to = jid+'/'+resources[index];
+                                var iq = $iq({type: "get", to: jid_to, from: converse.connection.jid}).c("req", {xmlns: "urn:xmpp:iot:sensordata", momentary: "true"});
+                                converse.log(iq.toString());
+                                converse.connection.sendIQ(iq,
+                                    function (message){
+                                        converse.log(message);
+                                    },
+                                    function (err){
+                                        converse.log(err);
+                                    },
+                                    600000
+                                );
+                            }
                         }
                         return;
                     }
@@ -1410,6 +1413,37 @@
                     } else if ((converse.allow_otr) && (match[1] === "otr")) {
                         return this.model.initiateOTR();
                     }
+                }
+                var data = text.split("/");
+                var info = data[1].split(" ");
+                if (info[0] === "write") {
+                    var name = info[1];
+                    var val = info[2];
+                    var jid = this.model.get('jid'),
+                    contact = converse.roster.get(jid);
+                    var nodeId = contact.get(name);
+                    var resources = contact.get('resources');
+                    var string = name+'Type';
+                    var nameType = contact.get(string);
+                    for (index = 0; index < resources.length; index++)
+                    {
+                        if(resources[index] != null)
+                        {
+                            var jid_to = jid+'/'+resources[index];
+                            var iq = $msg({to: jid_to, from: converse.connection.jid}).c("set", {xmlns: "urn:xmpp:iot:control"}).c(nameType, {"name": name, value: val});
+                            converse.log(iq.toString());
+                            converse.connection.send(iq,
+                                function (message){
+                                    converse.log(message);
+                                },
+                                function (err){
+                                    converse.log(err);
+                                },
+                                600000
+                            );
+                        }
+                    }
+                    return;
                 }
                 if (_.contains([UNVERIFIED, VERIFIED], this.model.get('otr_status'))) {
                     // Off-the-record encryption is active
@@ -3291,15 +3325,25 @@
                 var $message = $(message);
                 var msgs = [];
                 var tag = $(message).find('fields');
+                var from = $message.attr('from');
+                var contact = converse.roster.get(Strophe.getBareJidFromJid(from));
                 $(tag).find('node').each(function() {
+                    var node = $(this).attr('nodeId');
                     $(this).find('timestamp').each(function() {
                         $(this).find('numeric').each(function() {
-                            //converse.log($(this).attr('name')+" : "+$(this).attr('value'));
-                            msgs.push('<strong>'+$(this).attr('name')+' : '+'</strong>'+__($(this).attr('value'))+'');
+                            var name = $(this).attr('name');
+                            var type = name+'Type';
+                            var namedata = {};
+                            namedata[name] = node;
+                            contact.save(namedata);
+                            var typedata = {};
+                            typedata[type] = "numeric";
+                            contact.save(typedata);
+                            msgs.push('<strong>'+name+' : '+'</strong>'+__($(this).attr('value'))+'');
                         });
                     });
                 });
-                chatbox = this.get(Strophe.getBareJidFromJid($message.attr('from')));
+                chatbox = this.get(Strophe.getBareJidFromJid(from));
                 chatbox.trigger('showHelpMessages',(msgs));
             },
 
@@ -4104,7 +4148,7 @@
                         deferred.resolve(err);
                     }
                 );
-                converse.roster.identifyDevices(jid);
+                //converse.roster.identifyDevices(jid);
                 return deferred.promise();
             },
 
@@ -4218,10 +4262,10 @@
                         var contact = converse.roster.get(Strophe.getBareJidFromJid(from));
                         if(contact != null)
                         {
-                            contact.set({'support_0323': $item.find('feature[var="urn:xmpp:iot:sensordata"]').length});
-                            contact.set({'support_0325': $item.find('feature[var="urn:xmpp:iot:control"]').length});
+                            contact.save({'support_0323': $item.find('feature[var="urn:xmpp:iot:sensordata"]').length});
+                            contact.save({'support_0325': $item.find('feature[var="urn:xmpp:iot:control"]').length});
                             if(contact.get('support_0325') == 1 && contact.get('support_0323') == 1){
-                                contact.set({'chat_status':'wrench'});
+                                contact.save({'chat_status':'wrench'});
                                 converse.emit('contactStatusChanged', contact.attributes, contact.get('chat_status'));
                             }
                         }
