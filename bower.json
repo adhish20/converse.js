@@ -31,7 +31,8 @@
     "typeahead.js": "https://raw.githubusercontent.com/jcbrand/typeahead.js/eedfb10505dd3a20123d1fafc07c1352d83f0ab3/dist/typeahead.jquery.js",
     "skeleton-sass": "~2.0.3",
     "strophejs": "https://github.com/strophe/strophejs.git#9e285eaa59f4ceb2b25e4d95c5bbe90690251bbc",
-    "strophejs-plugins": "https://github.com/strophe/strophejs-plugins.git#amd"
+    "strophejs-plugins": "https://github.com/strophe/strophejs-plugins.git#amd",
+    "Chart.js": "https://github.com/nnnick/Chart.js.git#release/1.1"
   },
   "resolutions": {
     "backbone": "1.1.2"

@@ -48,9 +48,7 @@ define("converse-templates", [
     "tpl!status_option",
     "tpl!toggle_chats",
     "tpl!toolbar",
-    "tpl!trimmed_chat",
-    "tpl!iot_tab",
-    "tpl!iot_panel"
+    "tpl!trimmed_chat"
 ], function () {
     return {
         action:                 arguments[0],
@@ -102,8 +100,6 @@ define("converse-templates", [
         status_option:          arguments[46],
         toggle_chats:           arguments[47],
         toolbar:                arguments[48],
-        trimmed_chat:           arguments[49],
-        iot_tab:                arguments[50],
-        iot_panel:              arguments[51]
+        trimmed_chat:           arguments[49]
     };
 });

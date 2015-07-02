@@ -44,6 +44,7 @@ require.config({
         "typeahead":                "components/typeahead.js/index",
         "underscore":               "components/underscore/underscore",
         "utils":                    "src/utils",
+        "chart":                    "components/Chart.js/Chart",
 
         // Off-the-record-encryption
         "bigint":               "src/bigint",
@@ -110,8 +111,6 @@ require.config({
         "form_username":            "src/templates/form_username",
         "group_header":             "src/templates/group_header",
         "info":                     "src/templates/info",
-        "iot_tab":                  "src/templates/iot_tab",
-        "iot_panel":                  "src/templates/iot_panel",
         "login_panel":              "src/templates/login_panel",
         "login_tab":                "src/templates/login_tab",
         "message":                  "src/templates/message",
