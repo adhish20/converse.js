@@ -214,6 +214,8 @@
             9: 'REDIRECT'
         };
 
+        var SEQNR = 1;
+
         // XEP-0085 Chat states
         // http://xmpp.org/extensions/xep-0085.html
         var INACTIVE = 'inactive';
@@ -1188,6 +1190,7 @@
                 this.model.on('change:status', this.onStatusChanged, this);
                 this.model.on('showOTRError', this.showOTRError, this);
                 this.model.on('showHelpMessages', this.showHelpMessages, this);
+                this.model.on('showGraph', this.showGraph, this);
                 this.model.on('sendMessageStanza', this.sendMessageStanza, this);
                 this.model.on('showSentOTRMessage', function (text) {
                     this.showMessage({'message': text, 'sender': 'me'});
@@ -1285,36 +1288,13 @@
                 this.scrollDown();
             },
 
-            showGraph: function() {
+            showGraph: function(data) {
+            	converse.log(data.labels);
+            	converse.log(data.datasets[0].data);
                 var $chat_content = this.$el.find('.chat-content');
-                canvas = $('<canvas height="200px" width="200px" class="myChart"></canvas>');
+                canvas = $('<canvas height="400px" width="3000px" class="myChart"></canvas>');
                 $chat_content.append(canvas);
                 var ctx = canvas.get(0).getContext('2d');
-                var data = {
-                    labels: ["January", "February", "March", "April", "May", "June", "July"],
-                    datasets: [
-                        {
-                            label: "My First dataset",
-                            fillColor: "rgba(220,220,220,0.2)",
-                            strokeColor: "rgba(220,220,220,1)",
-                            pointColor: "rgba(220,220,220,1)",
-                            pointStrokeColor: "#fff",
-                            pointHighlightFill: "#fff",
-                            pointHighlightStroke: "rgba(220,220,220,1)",
-                            data: [65, 59, 80, 81, 56, 55, 40]
-                        },
-                        {
-                            label: "My Second dataset",
-                            fillColor: "rgba(151,187,205,0.2)",
-                            strokeColor: "rgba(151,187,205,1)",
-                            pointColor: "rgba(151,187,205,1)",
-                            pointStrokeColor: "#fff",
-                            pointHighlightFill: "#fff",
-                            pointHighlightStroke: "rgba(151,187,205,1)",
-                            data: [28, 48, 40, 19, 86, 27, 90]
-                        }
-                    ]
-                };
                 var myLineChart = new Chart(ctx).Line(data);
                 return this.scrollDown();
             },
@@ -1419,8 +1399,9 @@
                             if(resources[index] != null)
                             {
                                 var jid_to = jid+'/'+resources[index];
-                                var iq = $iq({type: "get", to: jid_to, from: converse.connection.jid}).c("req", {xmlns: "urn:xmpp:iot:sensordata", momentary: "true"});
-                                converse.log(iq.toString());
+                                var iq = $iq({type: "get", to: jid_to, from: converse.connection.jid}).c("req", {xmlns: "urn:xmpp:iot:sensordata", seqnr: SEQNR, momentary: "true"});
+                                SEQNR = SEQNR + 1;
+                                //converse.log(iq.toString());
                                 converse.connection.sendIQ(iq,
                                     function (message){
                                         converse.log(message);
@@ -1449,8 +1430,9 @@
                             if(resources[index] != null)
                             {
                                 var jid_to = jid+'/'+resources[index];
-                                var iq = $msg({to: jid_to, from: converse.connection.jid}).c("set", {xmlns: "urn:xmpp:iot:control"}).c(nameType, {"name": name, value: val});
-                                converse.log(iq.toString());
+                                var iq = $msg({to: jid_to, from: converse.connection.jid}).c("set", {xmlns: "urn:xmpp:iot:control", seqnr: SEQNR}).c(nameType, {"name": name, value: val});
+                                SEQNR = SEQNR + 1;
+                                //converse.log(iq.toString());
                                 converse.connection.send(iq,
                                     function (message){
                                         converse.log(message);
@@ -1465,25 +1447,35 @@
                         return;
                     }
                     else if ((match[1].split(" "))[0] === "history") {
-                    //    this.showGraph();
                         var info = match[1].split(" ");
-                        var name = info[1];
-                        var fromDate = this.timestampToDate(info[2]);
-                        var toDate = this.timestampToDate(info[3]);
+                        var name = info[2];
+                        var TimePeriod = info[1];
+                        var toTime = Math.round(new Date().getTime() / 1000);
+                        var fromTime = toTime - 24 * 60 * 60;
+						if(TimePeriod === "day")
+							fromTime = toTime - 24 * 60 * 60;
+						else if(TimePeriod === "week")
+							fromTime = toTime - 7 * 24 * 60 * 60;
+						else if(TimePeriod === "month")
+							fromTime = toTime - 30 * 24 * 60 * 60;
+						else if(TimePeriod === "year")
+						{
+							var d = new Date();
+							d.setFullYear(d.getFullYear() - 1);
+							fromTime = Math.round(d.getTime() / 1000);
+						}
+						fromTime = this.formatTime(new Date(fromTime*1000));
+						toTime = this.formatTime(new Date(toTime*1000));
                         var jid = this.model.get('jid'),
                         contact = converse.roster.get(jid);
-                    	//var nodeId = contact.get(name);
                         var resources = contact.get('resources');
-                        //var string = name+'Type';
-                        //var nameType = contact.get(string);
-                        contact.save({'show_graph': true});
                         for (index = 0; index < resources.length; index++)
                         {
                             if(resources[index] != null)
                             {
                                 var jid_to = jid+'/'+resources[index];
-                                var iq = $iq({type: "get", to: jid_to}).c("req", {xmlns: "urn:xmpp:iot:sensordata", historical: "true", from: fromDate, to: toDate}).c("field", {name: name});
-                                //var iq = $iq({type: 'get', to: to}).c('req', {xmlns: sensordata_getXmlNameSpace(), seqnr: seqnr, historical: 'true', from: fromDate, to: toDate}).c('node', {nodeId: nodeId}).up().c('field', {name: fieldName});
+                                var iq = $iq({type: "get", to: jid_to}).c("req", {xmlns: "urn:xmpp:iot:sensordata", seqnr: SEQNR , historical: "true", from: fromTime, to: toTime}).c("field", {name: name});
+                                SEQNR = SEQNR + 1;
                                 converse.log(iq.toString());
                                 converse.connection.sendIQ(iq,
                                     function (message){
@@ -1530,29 +1522,27 @@
                 }
             },
 
-            // Create a date object that from a timestamp formatted yyyy-mm-ddThh:mm:ss
-            timestampToDate: function(tstamp) {
-                var pieces = tstamp.replace(/[:T-]/g, ",").split(',');
-                var date = null;
-                if (pieces.length != 6) {
-                converse.log('_timestampToDate - unexcpected format ' + tstamp + ' ' + pieces.length);
-                } else {
-                var year = pieces[0];
-                var month = pieces[1];
-                while (month[0] == '0') {
-                    month = month.slice(1);
-                }
-                var day = pieces[2];
-                while (day[0] == '0') {
-                    day = day.slice(1);
-                }
-                var hour = pieces[3];
-                var min = pieces[4];
-                var sec = pieces[5];
-                date = new Date(year, (month-1), day, hour, min, sec);
-                }
-                return date;
-            },
+            formatTime: function(localDate) {
+			    if (!localDate) localDate = new Date();
+			    var tzo = -localDate.getTimezoneOffset();
+			    var sign = tzo >= 0 ? '+' : '-';
+			    var yyyy = localDate.getFullYear().toString();
+				var mm = (localDate.getMonth()+1).toString(); // getMonth() is zero-based
+				var dd = localDate.getDate().toString();
+				var hh = localDate.getHours().toString();
+				var MM = localDate.getMinutes().toString();
+				var ss = localDate.getSeconds().toString();
+				var TZH = Math.floor(tzo / 60).toString();
+				var TZS = (tzo % 60).toString();
+   				return yyyy
+	   				+"-"+(mm[1]?mm:"0"+mm[0])
+	   				+"-"+(dd[1]?dd:"0"+dd[0])
+	   				+"T"+(hh[1]?hh:"0"+hh[0])
+	   				+":"+(MM[1]?MM:"0"+MM[0])
+	   				+":"+(ss[1]?ss:"0"+ss[0])
+	   				+sign+(TZH[1]?TZH:"0"+TZH[0])
+	   				+":"+(TZS[1]?TZS:"0"+TZS[0]);
+			},
 
             sendChatState: function () {
                 /* Sends a message with the status of the user in this chat session
@@ -3390,20 +3380,44 @@
             },
 
             readValues: function (message) {
-                converse.log(message);
+                //converse.log(message);
                 var $message = $(message);
                 var msgs = [];
                 var tag = $(message).find('fields');
                 var from = $message.attr('from');
                 var contact = converse.roster.get(Strophe.getBareJidFromJid(from));
                 chatbox = this.get(Strophe.getBareJidFromJid(from));
-                if(contact.get('show_graph') == false)
-                {
-                	$(tag).find('node').each(function() {
-	                    var node = $(this).attr('nodeId');
-	                    $(this).find('timestamp').each(function() {
-	                        $(this).find('numeric').each(function() {
-	                            var name = $(this).attr('name');
+                var data = {
+                	labels: [],
+                	datasets: [
+                		{
+                            label: "",
+                            fillColor: "rgba(151,187,205,0.2)",
+                            strokeColor: "rgba(151,187,205,1)",
+                            pointColor: "rgba(151,187,205,1)",
+                            pointStrokeColor: "#fff",
+                            pointHighlightFill: "#fff",
+                            pointHighlightStroke: "rgba(220,220,220,1)",
+                            data: []
+                        }
+               		]
+               	};
+               	$(tag).find('node').each(function() {
+                    var node = $(this).attr('nodeId');
+                    $(this).find('timestamp').each(function() {
+                    	data.labels.push($(this).attr('value'));
+                        $(this).find('numeric').each(function() {
+                        	//converse.log($(this));
+                        	if($(this).attr('historical') === "true")
+                        	{
+                        		contact.save({'show_graph': true});
+                        		var name = $(this).attr('name');
+                            	data.datasets[0].label = name;
+                            	data.datasets[0].data.push($(this).attr('value'));
+                        	}
+                        	else
+                        	{
+                        		var name = $(this).attr('name');
 	                            var type = name+'Type';
 	                            var namedata = {};
 	                            namedata[name] = node;
@@ -3412,42 +3426,19 @@
 	                            typedata[type] = "numeric";
 	                            contact.save(typedata);
 	                            msgs.push('<strong>'+name+' : '+'</strong>'+__($(this).attr('value'))+'');
-	                        });
-	                    });
-	                });
-	                chatbox.trigger('showHelpMessages',(msgs));
-                }
-                else
-                {
-                	contact.save({'show_graph': false});
-                	var data = {
-                		labels: [],
-                		datasets: [
-                			{
-	                            label: "",
-	                            fillColor: "rgba(151,187,205,0.2)",
-	                            strokeColor: "rgba(151,187,205,1)",
-	                            pointColor: "rgba(151,187,205,1)",
-	                            pointStrokeColor: "#fff",
-	                            pointHighlightFill: "#fff",
-	                            pointHighlightStroke: "rgba(220,220,220,1)",
-	                            data: []
-	                        }
-                		]
-                	};
-                	$(tag).find('node').each(function() {
-	                    var node = $(this).attr('nodeId');
-	                    $(this).find('timestamp').each(function() {
-	                    	data.labels.push($(this).attr('value'));
-	                        $(this).find('numeric').each(function() {
-	                            var name = $(this).attr('name');
-	                            data.datasets[0].label = name;
-	                            data.datasets[0].data.push($(this).attr('value'));
-	                        });
-	                    });
-	                });
-                	chatbox.trigger('showGraph',(data));
-                }
+                        	}
+                        });
+                    });
+                });
+	            if(contact.get('show_graph') === false)
+	            {
+		            chatbox.trigger('showHelpMessages',(msgs));
+	            }
+	            else
+	            {
+	            	contact.save({'show_graph': false});
+	              	chatbox.trigger('showGraph',(data));
+	            }
             },
 
             onInvite: function (message) {

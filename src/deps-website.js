@@ -15,12 +15,12 @@ define("converse-dependencies", [
     "jquery.easing", // XXX: Only for https://conversejs.org
     "typeahead",
     "chart"
-], function($, _, utils, otr, moment, Strophe, Chart) {
+], function($, _, utils, otr, moment, Strophe) {
     return _.extend({
         'underscore': _,
         'jQuery': $,
         'otr': otr,
         'moment': moment,
         'utils': utils
-    }, Strophe, Chart);
+    }, Strophe);
 });
