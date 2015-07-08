@@ -1295,7 +1295,7 @@
                 canvas = $('<canvas height="400px" width="3000px" class="myChart"></canvas>');
                 $chat_content.append(canvas);
                 var ctx = canvas.get(0).getContext('2d');
-                var myLineChart = new Chart(ctx).Line(data);
+                var myLineChart = new Chart(ctx).Line(data,{tooltipTemplate:"<%= value %>"});
                 return this.scrollDown();
             },
 
